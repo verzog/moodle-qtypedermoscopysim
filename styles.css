@@ -1,0 +1,143 @@
+/* Scrollable container for the large clinical photograph. */
+.qtype_dermoscopysim-photoscroll {
+    overflow-x: auto;
+    max-width: 100%;
+    margin: 12px 0;
+}
+
+/* Photo wrapper — must be position:relative so the lens canvas can be
+   positioned absolutely over the top of it. */
+.qtype_dermoscopysim-photo {
+    position: relative;
+    display: inline-block;
+    min-width: 1000px;
+    touch-action: none;
+    cursor: crosshair;
+    user-select: none;
+}
+
+.qtype_dermoscopysim-photo img {
+    display: block;
+    width: 100%;
+    min-width: 1000px;
+    height: auto;
+    user-select: none;
+    pointer-events: none;
+}
+
+/* Circular canvas overlaid on the photo to show the magnified view.
+   pointer-events: none allows the photo wrapper to receive all drags. */
+.qtype_dermoscopysim-lens-canvas {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+/* Controls row beneath the photo: zoom group on the left, button on the right. */
+.qtype_dermoscopysim-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin: 8px 0 16px;
+}
+
+.qtype_dermoscopysim-zoomgroup {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.qtype_dermoscopysim-zoomlabel {
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.qtype_dermoscopysim-zoomslider {
+    width: 160px;
+}
+
+.qtype_dermoscopysim-zoomvalue {
+    min-width: 40px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Margin marking canvas (circular clip handled by canvas drawing). */
+.qtype_dermoscopysim-margincanvas {
+    display: block;
+    border-radius: 50%;
+    background: #000;
+    max-width: 100%;
+    touch-action: none;
+    cursor: crosshair;
+}
+
+.qtype_dermoscopysim-marginwrap {
+    margin-top: 8px;
+}
+
+/* Toolbar for margin editing controls. */
+.qtype_dermoscopysim-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 8px 0;
+    align-items: center;
+}
+
+/* Authoring editor panel (question editing form). */
+.qtype_dermoscopysim-editor {
+    margin: 12px 0;
+}
+
+.qtype_dermoscopysim-editcanvas {
+    display: block;
+    max-width: 100%;
+    cursor: crosshair;
+    border: 1px solid #ccc;
+}
+
+.qtype_dermoscopysim-mminput {
+    width: 130px;
+}
+
+.qtype_dermoscopysim-status {
+    color: #a32d2d;
+    margin: 4px 0;
+}
+
+.qtype_dermoscopysim-feedback {
+    margin-top: 8px;
+}
+
+/* Correct-answer comparison section. */
+.qtype_dermoscopysim-correct-heading {
+    margin: 16px 0 8px;
+}
+
+.qtype_dermoscopysim-correctanswer {
+    margin-bottom: 8px;
+}
+
+/* Colour legend for the correct-answer canvas. */
+.qtype_dermoscopysim-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin: 8px 0;
+    font-size: 0.9em;
+}
+
+.qtype_dermoscopysim-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.qtype_dermoscopysim-legend-swatch {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
