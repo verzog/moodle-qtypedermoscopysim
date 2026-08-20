@@ -75,10 +75,15 @@ APIs.
 
 ## Licence
 
-Copyright © Skin Cancer College Australasia. All rights reserved.
+Copyright © Skin Cancer College Australasia.
 
-This plugin is **proprietary** and is **not** released under the GNU General Public
-Licence or any other open-source licence. It is developed for in-house use by Skin
-Cancer College Australasia only. Unauthorised copying, distribution, modification, or
-use of this software, in whole or in part, is strictly prohibited without the prior
-written permission of Skin Cancer College Australasia.
+This program is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software Foundation,
+either version 3 of the Licence, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this
+program. If not, see <https://www.gnu.org/licenses/>.

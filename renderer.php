@@ -1,25 +1,26 @@
 <?php
-// Copyright (c) Skin Cancer College Australasia.
-// All rights reserved.
+// This file is part of Moodle - https://moodle.org/
 //
-// This file is part of a proprietary plugin developed by Skin Cancer
-// College Australasia for use with Moodle. It is NOT free software and is
-// NOT released under the GNU General Public License.
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
 //
-// Unauthorised copying, distribution, modification, or use of this file,
-// in whole or in part, via any medium, is strictly prohibited without the
-// prior written permission of Skin Cancer College Australasia. The software
-// is provided "as is", without warranty of any kind, express or implied.
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
  * Renderer for the dermoscopy simulator question type.
  *
  * @package    qtype_dermoscopysim
- * @copyright  © Skin Cancer College Australasia
- * @license    Proprietary — Skin Cancer College Australasia, all rights reserved
+ * @copyright  2026 Skin Cancer College Australasia
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-defined('MOODLE_INTERNAL') || die();
 
 /**
  * Generates the output for dermoscopy simulator questions.
@@ -28,11 +29,10 @@ defined('MOODLE_INTERNAL') || die();
  * container element which the simulator AMD module turns into the
  * interactive dermoscope and margin-marking canvases.
  *
- * @copyright  © Skin Cancer College Australasia
- * @license    Proprietary — Skin Cancer College Australasia, all rights reserved
+ * @copyright  2026 Skin Cancer College Australasia
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class qtype_dermoscopysim_renderer extends qtype_renderer {
-
     /**
      * Generate the area that contains the question text and controls.
      *
@@ -143,8 +143,10 @@ class qtype_dermoscopysim_renderer extends qtype_renderer {
         $response = $qa->get_last_qt_data();
 
         // Use the student's capture position if present.
-        if (isset($response['capturex']) && is_numeric($response['capturex'])
-                && isset($response['capturey']) && is_numeric($response['capturey'])) {
+        if (
+            isset($response['capturex']) && is_numeric($response['capturex'])
+                && isset($response['capturey']) && is_numeric($response['capturey'])
+        ) {
             $capturex = (float) $response['capturex'];
             $capturey = (float) $response['capturey'];
         } else {
