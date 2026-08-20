@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="question/type/dermoscopysim/db" VERSION="20260803" COMMENT="XMLDB file for Moodle question/type/dermoscopysim"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <TABLE NAME="qtype_dermoscopysim" COMMENT="Options for dermoscopy simulator questions">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="questionid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Foreign key to the question table"/>
+        <FIELD NAME="mmperpx" TYPE="number" LENGTH="12" NOTNULL="true" DEFAULT="0" SEQUENCE="false" DECIMALS="7" COMMENT="Millimetres represented by one pixel of the clinical photograph"/>
+        <FIELD NAME="lensdiametermm" TYPE="number" LENGTH="10" NOTNULL="true" DEFAULT="20" SEQUENCE="false" DECIMALS="2" COMMENT="Diameter of the simulated dermoscope faceplate in millimetres"/>
+        <FIELD NAME="magnification" TYPE="number" LENGTH="10" NOTNULL="true" DEFAULT="10" SEQUENCE="false" DECIMALS="2" COMMENT="Nominal optical magnification shown in the viewfinder"/>
+        <FIELD NAME="capturetolerancemm" TYPE="number" LENGTH="10" NOTNULL="true" DEFAULT="2" SEQUENCE="false" DECIMALS="2" COMMENT="Distance from lesion centre within which the capture earns full marks"/>
+        <FIELD NAME="captureweight" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="30" SEQUENCE="false" COMMENT="Percentage of the question grade awarded for the capture step"/>
+        <FIELD NAME="marginmethod" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="distance" SEQUENCE="false" COMMENT="Margin assessment method: ideal, distance or zones"/>
+        <FIELD NAME="marginmm" TYPE="number" LENGTH="10" NOTNULL="true" DEFAULT="2" SEQUENCE="false" DECIMALS="2" COMMENT="Minimum acceptable clearance from the lesion edge in millimetres"/>
+        <FIELD NAME="marginmaxmm" TYPE="number" LENGTH="10" NOTNULL="true" DEFAULT="4" SEQUENCE="false" DECIMALS="2" COMMENT="Maximum acceptable clearance from the lesion edge in millimetres"/>
+        <FIELD NAME="idealtolerancemm" TYPE="number" LENGTH="10" NOTNULL="true" DEFAULT="1" SEQUENCE="false" DECIMALS="2" COMMENT="Mean deviation from the ideal margin that still earns full marks"/>
+        <FIELD NAME="lesiondata" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON polygon of the lesion boundary in image pixels"/>
+        <FIELD NAME="idealmargindata" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON polygon of the instructor-drawn ideal margin in image pixels"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="questionid" TYPE="foreign-unique" FIELDS="questionid" REFTABLE="question" REFFIELDS="id"/>
+      </KEYS>
+    </TABLE>
+  </TABLES>
+</XMLDB>
