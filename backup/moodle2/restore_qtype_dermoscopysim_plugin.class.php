@@ -33,4 +33,19 @@ require_once($CFG->dirroot . '/backup/moodle2/restore_qtype_extrafields_plugin.c
  * @license    Proprietary — Skin Cancer College Australasia, all rights reserved
  */
 class restore_qtype_dermoscopysim_plugin extends restore_qtype_extrafields_plugin {
+
+    /**
+     * Restore the dermoscopy simulator options for one question.
+     *
+     * The parent class defines the restore path element (named after the
+     * question type) but leaves the matching process_<qtype>() handler to the
+     * plugin. Delegating to really_process_extra_question_fields() restores
+     * every column declared in extra_question_fields().
+     *
+     * @param array $data the parsed options data for one question
+     * @return void
+     */
+    public function process_dermoscopysim($data) {
+        $this->really_process_extra_question_fields($data);
+    }
 }
