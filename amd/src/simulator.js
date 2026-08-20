@@ -111,6 +111,7 @@ define([], function() {
      * @param {Number} faceplatePx the faceplate diameter in natural pixels
      * @param {Number} zoomLevel the current zoom multiplier
      * @param {Number} size the canvas size in display pixels
+     * @param {Number} [clipRadius] radius of the circular clip; defaults to size / 2 - 2
      */
     function drawDermoscopicView(ctx, img, cx, cy, faceplatePx, zoomLevel, size, clipRadius) {
         var r = size / 2;
@@ -150,6 +151,7 @@ define([], function() {
      * @param {CanvasRenderingContext2D} ctx
      * @param {Number} size the canvas size
      * @param {Number} faceplateMmVisible how many mm are visible in the lens
+     * @param {Number} [innerR] inner radius the bar sits within; defaults to size / 2 - 2
      */
     function drawReticle(ctx, size, faceplateMmVisible, innerR) {
         var r = size / 2;
@@ -829,6 +831,12 @@ define([], function() {
             var ox = cx - srcD / 2;
             var oy = cy - srcD / 2;
 
+            /**
+             * Convert natural image points to canvas coordinates.
+             *
+             * @param {Array} pts list of [x, y] natural-image pairs
+             * @return {Array} the points in canvas coordinates
+             */
             function tc(pts) {
                 return pts.map(function(p) {
                     return [(p[0] - ox) * cs, (p[1] - oy) * cs];
