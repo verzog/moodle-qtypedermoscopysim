@@ -49,8 +49,7 @@ jobs:
           moodle-plugin-ci install \
             --plugin ./plugin \
             --db-host=127.0.0.1 \
-            --branch ${{ matrix.moodle-branch }} \
-            --moodle-branch ${{ matrix.moodle-branch }}
+            --branch ${{ matrix.moodle-branch }}
         env:
           DB: ${{ matrix.database }}
           MOODLE_BEHAT_WWWROOT: http://localhost:8000
