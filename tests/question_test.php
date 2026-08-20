@@ -31,9 +31,7 @@ require_once($CFG->dirroot . '/question/engine/tests/helpers.php');
  */
 class qtype_dermoscopysim_question_test extends advanced_testcase {
 
-    // -------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------
+    // Helper methods.
 
     /**
      * Returns a centred-lesion question for use in tests.
@@ -75,9 +73,7 @@ class qtype_dermoscopysim_question_test extends advanced_testcase {
         return ['margindata' => $this->encode_points($pts)];
     }
 
-    // -------------------------------------------------------------------
-    // Capture grading
-    // -------------------------------------------------------------------
+    // Capture grading tests.
 
     /**
      * A response with the lens exactly on the lesion centroid earns full capture marks.
@@ -142,9 +138,7 @@ class qtype_dermoscopysim_question_test extends advanced_testcase {
         $this->assertEqualsWithDelta(0.0, $score, 0.001);
     }
 
-    // -------------------------------------------------------------------
-    // Margin grading — distance method
-    // -------------------------------------------------------------------
+    // Margin grading tests: distance method.
 
     /**
      * A margin polygon that surrounds the lesion with clearance inside the band
@@ -221,9 +215,7 @@ class qtype_dermoscopysim_question_test extends advanced_testcase {
         $this->assertEqualsWithDelta(0.0, $score, 0.001);
     }
 
-    // -------------------------------------------------------------------
-    // Margin grading — ideal method
-    // -------------------------------------------------------------------
+    // Margin grading tests: ideal method.
 
     /**
      * A student margin matching the instructor's ideal polygon earns full marks.
@@ -241,9 +233,7 @@ class qtype_dermoscopysim_question_test extends advanced_testcase {
         $this->assertEqualsWithDelta(1.0, $score, 0.001);
     }
 
-    // -------------------------------------------------------------------
-    // Combined grading
-    // -------------------------------------------------------------------
+    // Combined grading tests.
 
     /**
      * Perfect capture + perfect margin = overall score of 1.0.
@@ -287,9 +277,7 @@ class qtype_dermoscopysim_question_test extends advanced_testcase {
         $this->assertLessThan(0.1, $fraction);
     }
 
-    // -------------------------------------------------------------------
-    // Completeness checks
-    // -------------------------------------------------------------------
+    // Completeness-check tests.
 
     /**
      * A response with no captured position is not complete.
@@ -333,9 +321,7 @@ class qtype_dermoscopysim_question_test extends advanced_testcase {
         $this->assertTrue($q->is_complete_response($response));
     }
 
-    // -------------------------------------------------------------------
-    // Centroid helper
-    // -------------------------------------------------------------------
+    // Centroid helper test.
 
     /**
      * The static centroid() function returns the area-weighted centroid of a polygon.
