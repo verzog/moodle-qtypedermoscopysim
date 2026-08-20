@@ -1,57 +1,59 @@
-name: Moodle Plugin CI
+name: Moodle CI
 
+# Run on pull requests, and on pushes to main and tags only. A plain
+# "[push, pull_request]" runs the whole matrix twice for every push to a PR
+# branch (once per event); scoping push to main/tags avoids that duplication
+# while still covering post-merge and release builds.
 on:
   push:
     branches:
       - main
-      - 'MOODLE_*'
+    tags:
+      - '*'
   pull_request:
-    branches:
-      - main
 
 jobs:
   test:
-    runs-on: ubuntu-22.04
-
-    env:
-      TZ: Australia/Sydney
-
-    strategy:
-      fail-fast: false
-      matrix:
-        php: ['8.2', '8.3', '8.4']
-        moodle-branch: ['MOODLE_500_STABLE', 'MOODLE_501_STABLE']
-        database: [mysqli, pgsql]
-        # Moodle 5.2 excluded: branch not yet stable at time of writing.
+    runs-on: ubuntu-latest
 
     services:
       postgres:
-        image: postgres:14
+        image: postgres:16
         env:
-          POSTGRES_USER: 'postgres'
-          POSTGRES_HOST_AUTH_METHOD: 'trust'
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 3
-
+          --health-cmd="pg_isready" --health-interval=10s
+          --health-timeout=5s --health-retries=3
       mariadb:
         image: mariadb:10.11
         env:
-          MYSQL_USER: 'root'
-          MYSQL_ALLOW_EMPTY_PASSWORD: "true"
-          MYSQL_CHARACTER_SET_SERVER: "utf8mb4"
-          MYSQL_COLLATION_SERVER: "utf8mb4_unicode_ci"
+          MYSQL_USER: root
+          MYSQL_ALLOW_EMPTY_PASSWORD: true
+          MYSQL_CHARACTER_SET_SERVER: utf8mb4
+          MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 3
+          --health-cmd="mysqladmin ping" --health-interval=10s
+          --health-timeout=5s --health-retries=3
+    strategy:
+      fail-fast: false
+      matrix:
+        # Moodle 5.0 requires PHP 8.2+; 8.4 is supported on 5.0 and later.
+        # The branches here must cover everything version.php declares in
+        # $plugin->supported (currently 5.0-5.1). Add MOODLE_502_STABLE here
+        # (and bump $plugin->supported) once 5.2 is a supported target.
+        php: ['8.2', '8.3', '8.4']
+        moodle-branch: ['MOODLE_500_STABLE', 'MOODLE_501_STABLE']
+        database: ['pgsql', 'mariadb']
+
+    env:
+      # Australian timezone so date/time tests respect AEST/AWST offsets.
+      TZ: Australia/Sydney
 
     steps:
       - name: Check out plugin
@@ -63,53 +65,70 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, pgsql, mysqli, zip, gd
+          extensions: zip, xml, gd, mbstring, sodium, intl, soap, xmlrpc
+          ini-values: max_input_vars=5000
           coverage: none
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Initialise moodle-plugin-ci
         run: |
           composer create-project -n --no-dev --prefer-dist \
             moodlehq/moodle-plugin-ci ci ^4
-          echo "$(cd ci && pwd)/bin" >> $GITHUB_PATH
-          echo "$(cd ci && pwd)/vendor/bin" >> $GITHUB_PATH
-
+          echo "$(pwd)/ci/bin" >> "$GITHUB_PATH"
+          echo "$(pwd)/ci/vendor/bin" >> "$GITHUB_PATH"
+          sudo locale-gen en_AU.UTF-8
       - name: Install Moodle
-        run: |
-          moodle-plugin-ci install \
-            --plugin ./plugin \
-            --db-host=127.0.0.1 \
-            --branch ${{ matrix.moodle-branch }}
+        run: moodle-plugin-ci install --plugin ./plugin --db-host=127.0.0.1
         env:
           DB: ${{ matrix.database }}
-          MOODLE_BEHAT_WWWROOT: http://localhost:8000
+          MOODLE_BRANCH: ${{ matrix.moodle-branch }}
 
-      - name: PHP lint
+      - name: PHP Lint
+        if: ${{ !cancelled() }}
         run: moodle-plugin-ci phplint
 
-      - name: Moodle coding standards
-        run: moodle-plugin-ci codechecker --max-warnings 0
+      - name: PHP Copy/Paste Detector
+        continue-on-error: true
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpcpd
 
-      - name: PHPDoc checker
+      - name: PHP Mess Detector
+        continue-on-error: true
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpmd
+
+      - name: Moodle Code Checker
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpcs --max-warnings 0
+
+      - name: Moodle PHPDoc Checker
+        if: ${{ !cancelled() }}
         run: moodle-plugin-ci phpdoc --max-warnings 0
 
-      - name: Validate plugin structure
+      - name: Validating
+        if: ${{ !cancelled() }}
         run: moodle-plugin-ci validate
 
       - name: Check upgrade savepoints
+        if: ${{ !cancelled() }}
         run: moodle-plugin-ci savepoints
 
-      - name: Mustache template lint
+      - name: Mustache Lint
+        if: ${{ !cancelled() }}
         run: moodle-plugin-ci mustache
 
-      - name: Grunt (AMD / SCSS)
-        run: moodle-plugin-ci grunt
+      - name: Grunt
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci grunt --max-lint-warnings 0
 
       - name: PHPUnit tests
+        if: ${{ !cancelled() }}
         run: moodle-plugin-ci phpunit --fail-on-warning
 
-      - name: Behat acceptance tests
-        run: |
-          php -S localhost:8000 -t moodle &
-          moodle-plugin-ci behat \
-            --tags="@qtype_dermoscopysim" \
-            --auto-rerun 3
+      - name: Behat features
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci behat --profile chrome
