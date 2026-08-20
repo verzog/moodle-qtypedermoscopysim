@@ -2,7 +2,8 @@
 <ruleset name="qtype_dermoscopysim">
     <rule ref="moodle">
         <!-- Proprietary, in-house plugin: not GPL, so the Moodle GPL
-             boilerplate sniff does not apply. See CLAUDE.md §2.1 / §9. -->
+             boilerplate sniff does not apply. See the licence notice at the
+             top of each source file and the Licence section of README.md. -->
         <exclude name="moodle.Files.BoilerplateComment"/>
     </rule>
 </ruleset>

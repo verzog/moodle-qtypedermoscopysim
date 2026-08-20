@@ -176,7 +176,6 @@ class qtype_dermoscopysim_edit_form extends question_edit_form {
             'lesionlabel' => get_string('lesionlabel', 'qtype_dermoscopysim'),
             'ideallabel' => get_string('ideallabel', 'qtype_dermoscopysim'),
         ];
-        $this->_form->addElement('html', '');
         global $PAGE;
         $PAGE->requires->js_call_amd(
             'qtype_dermoscopysim/editform',

@@ -143,7 +143,8 @@ class qtype_dermoscopysim_renderer extends qtype_renderer {
         $response = $qa->get_last_qt_data();
 
         // Use the student's capture position if present.
-        if (!empty($response['capturex']) && is_numeric($response['capturex'])) {
+        if (isset($response['capturex']) && is_numeric($response['capturex'])
+                && isset($response['capturey']) && is_numeric($response['capturey'])) {
             $capturex = (float) $response['capturex'];
             $capturey = (float) $response['capturey'];
         } else {

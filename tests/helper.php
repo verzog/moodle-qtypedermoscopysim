@@ -24,15 +24,14 @@ defined('MOODLE_INTERNAL') || die();
 /**
  * Helpers for creating dermoscopysim question instances in PHPUnit tests.
  */
-class qtype_dermoscopysim_test_helper extends question_test_helper
-{
+class qtype_dermoscopysim_test_helper extends question_test_helper {
+
     /**
      * Returns the list of test question variants this helper can make.
      *
      * @return string[]
      */
-    public function get_test_questions()
-    {
+    public function get_test_questions() {
         return ['lesion_centred', 'lesion_offset'];
     }
 
@@ -45,8 +44,7 @@ class qtype_dermoscopysim_test_helper extends question_test_helper
      *
      * @return qtype_dermoscopysim_question
      */
-    public function make_dermoscopysim_question_lesion_centred()
-    {
+    public function make_dermoscopysim_question_lesion_centred() {
         question_bank::load_question_definition_classes('dermoscopysim');
         $q = new qtype_dermoscopysim_question();
 
@@ -88,8 +86,7 @@ class qtype_dermoscopysim_test_helper extends question_test_helper
      *
      * @return qtype_dermoscopysim_question
      */
-    public function make_dermoscopysim_question_lesion_offset()
-    {
+    public function make_dermoscopysim_question_lesion_offset() {
         $q = $this->make_dermoscopysim_question_lesion_centred();
         $q->name       = 'Dermoscopy test — offset lesion';
 
