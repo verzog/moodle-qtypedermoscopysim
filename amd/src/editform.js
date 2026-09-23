@@ -47,6 +47,98 @@ define([], function() {
         return node;
     };
 
+    // Number of radial samples used to draw the acceptance band, matching the
+    // server-side grader's ray count so the preview reflects real scoring.
+    var RAY_SAMPLES = 72;
+
+    /**
+     * Read a numeric value from a named form field.
+     *
+     * @param {String} name the form field name
+     * @return {Number} the parsed value, or NaN if absent/invalid
+     */
+    function fieldNumber(name) {
+        var field = document.querySelector('[name="' + name + '"]');
+        return field ? parseFloat(field.value) : NaN;
+    }
+
+    /**
+     * Read the current value of a named select/text field as a string.
+     *
+     * @param {String} name the form field name
+     * @return {String} the field value, or '' if absent
+     */
+    function fieldString(name) {
+        var field = document.querySelector('[name="' + name + '"]');
+        return field ? String(field.value) : '';
+    }
+
+    /**
+     * Compute the area-weighted centroid of a polygon, falling back to the
+     * vertex mean for degenerate shapes. Mirrors the server-side grader.
+     *
+     * @param {Array} points the polygon vertices as [x, y] pairs
+     * @return {Number[]} the centroid as [x, y]
+     */
+    function centroid(points) {
+        var n = points.length;
+        var area = 0;
+        var cx = 0;
+        var cy = 0;
+        for (var i = 0; i < n; i++) {
+            var j = (i + 1) % n;
+            var cross = (points[i][0] * points[j][1]) - (points[j][0] * points[i][1]);
+            area += cross;
+            cx += (points[i][0] + points[j][0]) * cross;
+            cy += (points[i][1] + points[j][1]) * cross;
+        }
+        if (Math.abs(area) < 0.0001) {
+            var sx = 0;
+            var sy = 0;
+            for (var k = 0; k < n; k++) {
+                sx += points[k][0];
+                sy += points[k][1];
+            }
+            return [sx / n, sy / n];
+        }
+        area *= 0.5;
+        return [cx / (6 * area), cy / (6 * area)];
+    }
+
+    /**
+     * Distance from a centre point to a polygon boundary along a ray, taking
+     * the furthest intersection. Mirrors the server-side grader.
+     *
+     * @param {Array} points the polygon vertices as [x, y] pairs
+     * @param {Number} cx the ray origin x
+     * @param {Number} cy the ray origin y
+     * @param {Number} angle the ray angle in radians
+     * @return {Number|null} the distance in pixels, or null if there is no hit
+     */
+    function radiusAtAngle(points, cx, cy, angle) {
+        var dx = Math.cos(angle);
+        var dy = Math.sin(angle);
+        var n = points.length;
+        var best = null;
+        for (var i = 0; i < n; i++) {
+            var j = (i + 1) % n;
+            var ex = points[j][0] - points[i][0];
+            var ey = points[j][1] - points[i][1];
+            var denom = (dx * ey) - (dy * ex);
+            if (Math.abs(denom) < 0.0000001) {
+                continue;
+            }
+            var ox = points[i][0] - cx;
+            var oy = points[i][1] - cy;
+            var t = ((ox * ey) - (oy * ex)) / denom;
+            var u = ((ox * dy) - (oy * dx)) / denom;
+            if (t > 0 && u >= 0 && u <= 1 && (best === null || t > best)) {
+                best = t;
+            }
+        }
+        return best;
+    }
+
     /**
      * The authoring editor controller.
      *
@@ -148,6 +240,31 @@ define([], function() {
         this.canvas.addEventListener('click', function(e) {
             self.onClick(e);
         });
+
+        // Redraw the acceptance band whenever a grading setting that shapes it
+        // changes, so the preview always reflects the current configuration.
+        ['marginmethod', 'mmperpx', 'marginmm', 'marginmaxmm'].forEach(function(name) {
+            var field = document.querySelector('[name="' + name + '"]');
+            if (field) {
+                field.addEventListener('input', function() {
+                    self.draw();
+                });
+                field.addEventListener('change', function() {
+                    self.draw();
+                });
+            }
+        });
+    };
+
+    /**
+     * Show a status message, styled as neutral info or an error.
+     *
+     * @param {String} text the message to show
+     * @param {Boolean} [isError] true to style the message as an error
+     */
+    Editor.prototype.setStatus = function(text, isError) {
+        this.status.textContent = text;
+        this.status.classList.toggle('is-error', !!isError);
     };
 
     /**
@@ -171,7 +288,7 @@ define([], function() {
         var self = this;
         var thumb = document.querySelector('.filemanager img[src*="draftfile.php"]');
         if (!thumb) {
-            this.status.textContent = this.labels.imagenotfound;
+            this.setStatus(this.labels.imagenotfound, true);
             return;
         }
         var url = thumb.src.split('?')[0];
@@ -182,7 +299,7 @@ define([], function() {
             self.canvas.width = Math.round(img.naturalWidth * scale);
             self.canvas.height = Math.round(img.naturalHeight * scale);
             self.canvas.style.display = '';
-            self.status.textContent = '';
+            self.setStatus('', false);
             self.draw();
         });
         img.src = url;
@@ -257,12 +374,17 @@ define([], function() {
             (a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1])
         );
         if (isFinite(mm) && mm > 0 && dist > 0) {
+            var mmperpx = mm / dist;
             var field = document.querySelector('input[name="mmperpx"]');
             if (field) {
-                field.value = (mm / dist).toFixed(7);
+                field.value = mmperpx.toFixed(7);
             }
+            this.setStatus(this.labels.scaleset + ' ' + mmperpx.toFixed(4) + ' mm/px', false);
+        } else {
+            this.setStatus(this.labels.scaleneedsmm, true);
         }
         this.mode = null;
+        this.draw();
     };
 
     /**
@@ -277,6 +399,7 @@ define([], function() {
         ctx.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
 
         var scale = this.canvas.width / this.image.naturalWidth;
+        this.drawAcceptanceBand(ctx, scale);
         this.drawPolygon(ctx, this.lesion, scale, '#e53935', this.labels.lesionlabel);
         this.drawPolygon(ctx, this.ideal, scale, '#00b0ff', this.labels.ideallabel);
 
@@ -290,6 +413,91 @@ define([], function() {
             }
             ctx.stroke();
         }
+    };
+
+    /**
+     * Draw the excision-margin acceptance band implied by the current grading
+     * settings, so the author can see exactly which clearance will score full
+     * marks. Only shown for the distance and zones methods, which grade on a
+     * fixed clearance band; the ideal method grades on deviation from the drawn
+     * ideal polygon instead.
+     *
+     * @param {CanvasRenderingContext2D} ctx the canvas context
+     * @param {Number} scale the natural-to-canvas scale factor
+     */
+    Editor.prototype.drawAcceptanceBand = function(ctx, scale) {
+        var method = fieldString('marginmethod');
+        if (method !== 'distance' && method !== 'zones') {
+            return;
+        }
+        if (this.lesion.length < 3) {
+            return;
+        }
+        var mmperpx = fieldNumber('mmperpx');
+        var minmm = fieldNumber('marginmm');
+        var maxmm = fieldNumber('marginmaxmm');
+        if (!(mmperpx > 0) || !isFinite(minmm) || !isFinite(maxmm) || maxmm <= minmm) {
+            return;
+        }
+
+        var minpx = minmm / mmperpx;
+        var maxpx = maxmm / mmperpx;
+        var c = centroid(this.lesion);
+        var inner = [];
+        var outer = [];
+        for (var i = 0; i < RAY_SAMPLES; i++) {
+            var angle = (i / RAY_SAMPLES) * 2 * Math.PI;
+            var rl = radiusAtAngle(this.lesion, c[0], c[1], angle);
+            if (rl === null) {
+                return;
+            }
+            var dx = Math.cos(angle);
+            var dy = Math.sin(angle);
+            inner.push([(c[0] + dx * (rl + minpx)) * scale, (c[1] + dy * (rl + minpx)) * scale]);
+            outer.push([(c[0] + dx * (rl + maxpx)) * scale, (c[1] + dy * (rl + maxpx)) * scale]);
+        }
+
+        // Fill the ring between the outer and inner boundaries (even-odd).
+        ctx.save();
+        ctx.beginPath();
+        this.tracePath(ctx, outer);
+        this.tracePath(ctx, inner);
+        ctx.fillStyle = 'rgba(29, 158, 117, 0.22)';
+        ctx.fill('evenodd');
+
+        // Thin dashed edges for clarity.
+        ctx.setLineDash([5, 4]);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(29, 158, 117, 0.9)';
+        ctx.beginPath();
+        this.tracePath(ctx, inner);
+        ctx.stroke();
+        ctx.beginPath();
+        this.tracePath(ctx, outer);
+        ctx.stroke();
+        ctx.restore();
+
+        // Label near the top of the band.
+        ctx.fillStyle = 'rgba(15, 110, 80, 0.95)';
+        ctx.font = '12px sans-serif';
+        ctx.fillText(this.labels.acceptanceband, outer[0][0] + 6, outer[0][1] - 6);
+    };
+
+    /**
+     * Add a closed polygon to the current path without stroking or filling it.
+     *
+     * @param {CanvasRenderingContext2D} ctx the canvas context
+     * @param {Array} pts the polygon points in canvas coordinates
+     */
+    Editor.prototype.tracePath = function(ctx, pts) {
+        for (var i = 0; i < pts.length; i++) {
+            if (i === 0) {
+                ctx.moveTo(pts[i][0], pts[i][1]);
+            } else {
+                ctx.lineTo(pts[i][0], pts[i][1]);
+            }
+        }
+        ctx.closePath();
     };
 
     /**

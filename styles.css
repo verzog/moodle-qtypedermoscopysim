@@ -1,4 +1,5 @@
-/* Scrollable container for the large clinical photograph. */
+/* Container for the clinical photograph. overflow-x is a safety net for the
+   rare case where the photo is still wider than the viewport. */
 .qtype_dermoscopysim-photoscroll {
     overflow-x: auto;
     max-width: 100%;
@@ -6,20 +7,27 @@
 }
 
 /* Photo wrapper — must be position:relative so the lens canvas can be
-   positioned absolutely over the top of it. */
+   positioned absolutely over the top of it. It shrinks to the displayed image
+   so it stays responsive: the image scales down to fit narrow screens (phones,
+   tablets, split windows) instead of forcing a fixed width and horizontal
+   scroll. touch-action:none keeps a single-finger drag moving the dermoscope
+   rather than scrolling the page. */
 .qtype_dermoscopysim-photo {
     position: relative;
     display: inline-block;
-    min-width: 1000px;
+    max-width: 100%;
     touch-action: none;
-    cursor: crosshair;
+    cursor: grab;
     user-select: none;
+}
+
+.qtype_dermoscopysim-photo.is-dragging {
+    cursor: grabbing;
 }
 
 .qtype_dermoscopysim-photo img {
     display: block;
-    width: 100%;
-    min-width: 1000px;
+    max-width: 100%;
     height: auto;
     user-select: none;
     pointer-events: none;
@@ -29,6 +37,7 @@
    pointer-events: none allows the photo wrapper to receive all drags. */
 .qtype_dermoscopysim-lens-canvas {
     position: absolute;
+    aspect-ratio: 1 / 1;
     border-radius: 50%;
     pointer-events: none;
 }
@@ -62,9 +71,12 @@
     font-variant-numeric: tabular-nums;
 }
 
-/* Margin marking canvas (circular clip handled by canvas drawing). */
+/* Margin marking canvas (circular clip handled by canvas drawing). The
+   1:1 aspect-ratio lets it scale down as a square on narrow screens. */
 .qtype_dermoscopysim-margincanvas {
     display: block;
+    aspect-ratio: 1 / 1;
+    height: auto;
     border-radius: 50%;
     background: #000;
     max-width: 100%;
@@ -101,13 +113,51 @@
     width: 130px;
 }
 
+/* Authoring status line: neutral by default, red only for genuine errors. */
 .qtype_dermoscopysim-status {
-    color: #a32d2d;
     margin: 4px 0;
+    color: #555;
+}
+
+.qtype_dermoscopysim-status.is-error {
+    color: #a32d2d;
 }
 
 .qtype_dermoscopysim-feedback {
     margin-top: 8px;
+}
+
+/* Visual score meters shown in the specific feedback. */
+.qtype_dermoscopysim-meter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0;
+    max-width: 420px;
+}
+
+.qtype_dermoscopysim-meter-label {
+    flex: 0 0 8.5em;
+}
+
+.qtype_dermoscopysim-meter-track {
+    flex: 1 1 auto;
+    height: 12px;
+    border-radius: 6px;
+    background: #e6e6e6;
+    overflow: hidden;
+}
+
+.qtype_dermoscopysim-meter-fill {
+    height: 100%;
+    border-radius: 6px;
+    background: #1d9e75;
+}
+
+.qtype_dermoscopysim-meter-value {
+    flex: 0 0 3em;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
 }
 
 /* Correct-answer comparison section. */

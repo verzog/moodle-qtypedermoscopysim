@@ -22,11 +22,13 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+$string['acceptanceband'] = 'Acceptance band';
 $string['baseimage'] = 'Clinical photograph';
 $string['baseimage_help'] = 'Upload a single high-resolution clinical photograph. After uploading, use the authoring tools below to calibrate the scale and trace the lesion boundary on the photograph.';
 $string['calibratebyline'] = 'Calibrate by line';
 $string['capture'] = 'Capture image';
 $string['captureheader'] = 'Dermoscope and capture settings';
+$string['capturescore'] = 'Capture accuracy';
 $string['capturetolerancemm'] = 'Full-mark centring tolerance (mm)';
 $string['capturetolerancemm_help'] = 'A capture centred within this distance of the lesion centre earns full marks for the capture step. Marks then fall away linearly, reaching zero at the edge of the faceplate.';
 $string['captureweight'] = 'Capture weighting (%)';
@@ -61,7 +63,8 @@ $string['marginmaxmm'] = 'Maximum clearance (mm)';
 $string['marginmethod'] = 'Margin assessment method';
 $string['marginmethod_help'] = 'Distance from lesion edge: the clearance between the student margin and the lesion edge is sampled all the way around, and the score is the proportion of samples inside the clearance band. Zones: full marks only if every sample is inside the clearance band, otherwise zero. Compare to ideal margin: the student margin is compared with the instructor-drawn ideal margin, with full marks when the mean deviation is within the tolerance.';
 $string['marginmm'] = 'Minimum clearance (mm)';
-$string['marginprompt'] = 'Mark the excision margin on your captured image: click to place points around the lesion, and drag points to adjust them.';
+$string['marginprompt'] = 'Mark the excision margin on your captured image: drag to draw the outline with a mouse, finger or pen, or click to place points one at a time. Drag any point to adjust it.';
+$string['marginscore'] = 'Margin accuracy';
 $string['methoddistance'] = 'Distance from lesion edge';
 $string['methodideal'] = 'Compare to ideal margin';
 $string['methodzones'] = 'Zones (pass or fail)';
@@ -80,6 +83,8 @@ $string['privacy:metadata'] = 'The dermoscopy simulator question type plugin doe
 $string['responsesummary'] = 'Captured at ({$a->x}, {$a->y}) px; margin marked with {$a->count} points.';
 $string['retake'] = 'Retake image';
 $string['scalebar'] = '10 mm';
+$string['scaleneedsmm'] = 'Enter a known length in millimetres before drawing the calibration line.';
+$string['scaleset'] = 'Scale set to';
 $string['studentanswer'] = 'Your margin';
 $string['takepicture'] = 'Take picture';
 $string['undopoint'] = 'Undo last point';

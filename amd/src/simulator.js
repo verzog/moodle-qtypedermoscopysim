@@ -37,6 +37,14 @@ define([], function() {
     var MARGIN_SIZE = 480;
     var HANDLE_RADIUS = 7;
 
+    // Device pixel ratio, captured once, so canvases render crisply on HiDPI
+    // (retina) displays instead of being upscaled by the browser.
+    var DPR = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+
+    // Minimum spacing, in canvas pixels, between successive freehand points so
+    // a drag-to-draw stroke produces a smooth but not enormous polygon.
+    var FREEHAND_GAP = 8;
+
     // Width of the dermoscope bezel ring drawn inside the lens canvas.
     // At 320 px this gives a 42 px wide ring that closely matches the
     // proportions of a real hand-held dermatoscope.
@@ -98,6 +106,35 @@ define([], function() {
             }
         }
         return 20;
+    }
+
+    /**
+     * Size a canvas to a logical square size with a HiDPI backing store.
+     *
+     * The backing store is scaled by the device pixel ratio while the CSS box
+     * stays at the logical size, so drawing code can work in logical pixels and
+     * still render sharply on retina displays.
+     *
+     * @param {HTMLCanvasElement} canvas the canvas to size
+     * @param {Number} size the logical size in CSS pixels
+     */
+    function sizeCanvas(canvas, size) {
+        canvas.width = Math.round(size * DPR);
+        canvas.height = Math.round(size * DPR);
+        // Only the CSS width is fixed; height comes from the 1:1 aspect-ratio
+        // rule in the stylesheet, so a canvas capped by max-width on a narrow
+        // screen still scales as a square rather than distorting.
+        canvas.style.width = size + 'px';
+    }
+
+    /**
+     * Reset a context's transform so a full redraw works in logical pixels on
+     * a HiDPI backing store.
+     *
+     * @param {CanvasRenderingContext2D} ctx the context to prepare
+     */
+    function beginFrame(ctx) {
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     }
 
     // -----------------------------------------------------------------
@@ -208,8 +245,9 @@ define([], function() {
      * @param {String} stroke stroke colour
      * @param {String|null} fill fill colour, or null for no fill
      * @param {Number} [lineWidth=2] stroke width
+     * @param {Boolean} [closed=true] whether to close the path back to the start
      */
-    function drawPolygon(ctx, points, stroke, fill, lineWidth) {
+    function drawPolygon(ctx, points, stroke, fill, lineWidth, closed) {
         if (points.length < 2) {
             return;
         }
@@ -221,7 +259,7 @@ define([], function() {
                 ctx.lineTo(points[i][0], points[i][1]);
             }
         }
-        if (points.length >= 3) {
+        if (points.length >= 3 && closed !== false) {
             ctx.closePath();
         }
         if (fill) {
@@ -363,6 +401,8 @@ define([], function() {
         this.marginPoints = [];
         this.dragPointIndex = -1;
         this.dragMoved = false;
+        this.drawing = false;
+        this.strokeStarted = false;
         this.image = new Image();
         this.image.addEventListener('load', this.build.bind(this));
         this.image.src = config.imageurl;
@@ -394,8 +434,7 @@ define([], function() {
 
         // Lens canvas — overlaid on photo, invisible to pointer events.
         this.lensCanvas = document.createElement('canvas');
-        this.lensCanvas.width = LENS_SIZE;
-        this.lensCanvas.height = LENS_SIZE;
+        sizeCanvas(this.lensCanvas, LENS_SIZE);
         this.lensCanvas.className = 'qtype_dermoscopysim-lens-canvas';
         this.photoWrap.appendChild(this.lensCanvas);
 
@@ -430,8 +469,7 @@ define([], function() {
         this.marginWrap.appendChild(el('p', 'qtype_dermoscopysim-prompt', cfg.strings.marginprompt));
 
         this.marginCanvas = document.createElement('canvas');
-        this.marginCanvas.width = MARGIN_SIZE;
-        this.marginCanvas.height = MARGIN_SIZE;
+        sizeCanvas(this.marginCanvas, MARGIN_SIZE);
         this.marginCanvas.className = 'qtype_dermoscopysim-margincanvas';
         this.marginWrap.appendChild(this.marginCanvas);
 
@@ -517,6 +555,7 @@ define([], function() {
                 return;
             }
             dragging = true;
+            self.photoWrap.classList.add('is-dragging');
             self.photoWrap.setPointerCapture(e.pointerId);
             self.moveLensTo(e);
         });
@@ -527,6 +566,7 @@ define([], function() {
         });
         this.photoWrap.addEventListener('pointerup', function() {
             dragging = false;
+            self.photoWrap.classList.remove('is-dragging');
         });
 
         this.captureBtn.addEventListener('click', function() {
@@ -615,6 +655,7 @@ define([], function() {
      */
     Simulator.prototype.drawLens = function() {
         var ctx = this.lensCanvas.getContext('2d');
+        beginFrame(ctx);
         var innerR = LENS_SIZE / 2 - RING_WIDTH;
         // Clip the image to the inner circle so the bezel ring can overlay cleanly.
         drawDermoscopicView(
@@ -676,9 +717,11 @@ define([], function() {
      */
     Simulator.prototype.canvasPos = function(e) {
         var rect = this.marginCanvas.getBoundingClientRect();
+        // Map to the logical canvas coordinate space (0..MARGIN_SIZE), which is
+        // independent of both the HiDPI backing store and any CSS down-scaling.
         return [
-            (e.clientX - rect.left) * (this.marginCanvas.width / rect.width),
-            (e.clientY - rect.top) * (this.marginCanvas.height / rect.height)
+            (e.clientX - rect.left) * (MARGIN_SIZE / rect.width),
+            (e.clientY - rect.top) * (MARGIN_SIZE / rect.height)
         ];
     };
 
@@ -694,7 +737,10 @@ define([], function() {
             var c = this.toCanvas(this.marginPoints[i][0], this.marginPoints[i][1]);
             var dx = c[0] - cx;
             var dy = c[1] - cy;
-            if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 4) {
+            // Generous hit radius so an existing point is easy to grab with a
+            // finger, which also keeps a freehand redraw from wiping the polygon
+            // when the user meant to nudge a point.
+            if (Math.sqrt(dx * dx + dy * dy) <= HANDLE_RADIUS + 8) {
                 return i;
             }
         }
@@ -709,6 +755,7 @@ define([], function() {
             return;
         }
         var ctx = this.marginCanvas.getContext('2d');
+        beginFrame(ctx);
         drawDermoscopicView(ctx, this.image, this.lensX, this.lensY, this.faceplatePx, this.zoomLevel, MARGIN_SIZE);
         drawRing(ctx, MARGIN_SIZE, true);
         drawReticle(ctx, MARGIN_SIZE, this.config.lensdiametermm / this.zoomLevel);
@@ -722,44 +769,102 @@ define([], function() {
             return self.toCanvas(p[0], p[1]);
         });
 
-        drawPolygon(ctx, canvasPoints, '#2196f3', 'rgba(33, 150, 243, 0.15)', 2);
+        // While a freehand stroke is in progress draw it as an open trace with
+        // no fill; once released it becomes a filled, closed polygon.
+        var closed = !this.drawing;
+        var fill = closed ? 'rgba(33, 150, 243, 0.15)' : null;
+        drawPolygon(ctx, canvasPoints, '#2196f3', fill, 2, closed);
 
-        canvasPoints.forEach(function(c) {
-            ctx.beginPath();
-            ctx.arc(c[0], c[1], 5, 0, 2 * Math.PI);
-            ctx.fillStyle = '#2196f3';
-            ctx.fill();
-        });
+        // Draw draggable vertex handles, but only when the polygon is sparse
+        // enough that individual points are meaningful (a dense freehand trace
+        // reads better as a smooth line).
+        if (!this.drawing && canvasPoints.length <= 40) {
+            canvasPoints.forEach(function(c) {
+                ctx.beginPath();
+                ctx.arc(c[0], c[1], 5, 0, 2 * Math.PI);
+                ctx.fillStyle = '#2196f3';
+                ctx.fill();
+                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = '#fff';
+                ctx.stroke();
+            });
+        }
+    };
+
+    /**
+     * Round a natural-image coordinate pair to one decimal place.
+     *
+     * @param {Number[]} nat the [x, y] natural coordinate
+     * @return {Number[]} the rounded [x, y] pair
+     */
+    Simulator.prototype.roundPoint = function(nat) {
+        return [Math.round(nat[0] * 10) / 10, Math.round(nat[1] * 10) / 10];
     };
 
     Simulator.prototype.marginPointerDown = function(e) {
         var pos = this.canvasPos(e);
         this.dragPointIndex = this.findHandle(pos[0], pos[1]);
         this.dragMoved = false;
+        this.downPos = pos;
+        // Pressing on empty canvas begins a freehand stroke; pressing on an
+        // existing vertex grabs it for adjustment instead.
+        this.drawing = (this.dragPointIndex < 0);
+        this.strokeStarted = false;
         this.marginCanvas.setPointerCapture(e.pointerId);
     };
 
     Simulator.prototype.marginPointerMove = function(e) {
-        if (this.dragPointIndex < 0) {
+        var pos = this.canvasPos(e);
+
+        // Adjusting an existing vertex.
+        if (this.dragPointIndex >= 0) {
+            this.dragMoved = true;
+            this.marginPoints[this.dragPointIndex] = this.toNatural(pos[0], pos[1]);
+            this.drawMargin();
             return;
         }
-        this.dragMoved = true;
-        var pos = this.canvasPos(e);
-        this.marginPoints[this.dragPointIndex] = this.toNatural(pos[0], pos[1]);
-        this.drawMargin();
+
+        if (!this.drawing) {
+            return;
+        }
+
+        // Freehand draw: the first real movement (past a small threshold, so a
+        // jittery tap does not wipe an existing polygon) starts a fresh polygon,
+        // then points are appended as the pointer travels far enough.
+        var nat = this.roundPoint(this.toNatural(pos[0], pos[1]));
+        if (!this.strokeStarted) {
+            var mdx = pos[0] - this.downPos[0];
+            var mdy = pos[1] - this.downPos[1];
+            if (Math.sqrt(mdx * mdx + mdy * mdy) < FREEHAND_GAP) {
+                return;
+            }
+            this.strokeStarted = true;
+            this.dragMoved = true;
+            this.marginPoints = [nat];
+            this.drawMargin();
+            return;
+        }
+        var last = this.marginPoints[this.marginPoints.length - 1];
+        var lc = this.toCanvas(last[0], last[1]);
+        var dx = lc[0] - pos[0];
+        var dy = lc[1] - pos[1];
+        if (Math.sqrt(dx * dx + dy * dy) >= FREEHAND_GAP) {
+            this.marginPoints.push(nat);
+            this.drawMargin();
+        }
     };
 
     Simulator.prototype.marginPointerUp = function(e) {
-        var pos = this.canvasPos(e);
-        if (this.dragPointIndex < 0 && !this.dragMoved) {
-            var nat = this.toNatural(pos[0], pos[1]);
-            this.marginPoints.push([
-                Math.round(nat[0] * 10) / 10,
-                Math.round(nat[1] * 10) / 10
-            ]);
+        // A press-and-release with no drag places a single point, so precise
+        // click/tap-to-place still works alongside freehand drawing.
+        if (this.drawing && !this.strokeStarted) {
+            var pos = this.canvasPos(e);
+            this.marginPoints.push(this.roundPoint(this.toNatural(pos[0], pos[1])));
         }
         this.dragPointIndex = -1;
         this.dragMoved = false;
+        this.drawing = false;
+        this.strokeStarted = false;
         this.saveMargin();
         this.drawMargin();
     };
@@ -816,12 +921,12 @@ define([], function() {
 
             // Build the canvas.
             var canvas = document.createElement('canvas');
-            canvas.width = size;
-            canvas.height = size;
+            sizeCanvas(canvas, size);
             canvas.className = 'qtype_dermoscopysim-margincanvas';
             container.appendChild(canvas);
 
             var ctx = canvas.getContext('2d');
+            beginFrame(ctx);
 
             // Dermoscopic view at zoom 1.0 (full faceplate).
             drawDermoscopicView(ctx, img, cx, cy, faceplatePx, 1.0, size);
