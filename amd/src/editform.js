@@ -448,13 +448,20 @@ define([], function() {
         for (var i = 0; i < RAY_SAMPLES; i++) {
             var angle = (i / RAY_SAMPLES) * 2 * Math.PI;
             var rl = radiusAtAngle(this.lesion, c[0], c[1], angle);
+            // A concave lesion (U or crescent) whose centroid lies outside the
+            // outline has rays with no forward hit; the grader skips those and
+            // scores the rest, so skip them here too rather than abandoning the
+            // whole preview.
             if (rl === null) {
-                return;
+                continue;
             }
             var dx = Math.cos(angle);
             var dy = Math.sin(angle);
             inner.push([(c[0] + dx * (rl + minpx)) * scale, (c[1] + dy * (rl + minpx)) * scale]);
             outer.push([(c[0] + dx * (rl + maxpx)) * scale, (c[1] + dy * (rl + maxpx)) * scale]);
+        }
+        if (inner.length < 3) {
+            return;
         }
 
         // Fill the ring between the outer and inner boundaries (even-odd).

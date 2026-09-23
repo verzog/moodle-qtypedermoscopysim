@@ -568,6 +568,10 @@ define([], function() {
             dragging = false;
             self.photoWrap.classList.remove('is-dragging');
         });
+        this.photoWrap.addEventListener('pointercancel', function() {
+            dragging = false;
+            self.photoWrap.classList.remove('is-dragging');
+        });
 
         this.captureBtn.addEventListener('click', function() {
             self.captured = true;
@@ -610,6 +614,12 @@ define([], function() {
         });
         this.marginCanvas.addEventListener('pointerup', function(e) {
             self.marginPointerUp(e);
+        });
+        this.marginCanvas.addEventListener('pointercancel', function() {
+            self.finalizeMargin();
+        });
+        this.marginCanvas.addEventListener('lostpointercapture', function() {
+            self.finalizeMargin();
         });
     };
 
@@ -801,6 +811,39 @@ define([], function() {
         return [Math.round(nat[0] * 10) / 10, Math.round(nat[1] * 10) / 10];
     };
 
+    /**
+     * The freehand spacing threshold expressed in logical canvas units for the
+     * current on-screen size, so the tolerance stays constant in screen pixels
+     * even when the canvas is CSS-scaled down on a narrow display.
+     *
+     * @return {Number} the threshold in logical canvas units
+     */
+    Simulator.prototype.freehandGapLogical = function() {
+        var rect = this.marginCanvas.getBoundingClientRect();
+        var scale = rect.width > 0 ? rect.width / MARGIN_SIZE : 1;
+        return FREEHAND_GAP / scale;
+    };
+
+    /**
+     * Finalise the current margin interaction and sync the hidden field.
+     *
+     * Bound to pointercancel and lostpointercapture so that an interrupted
+     * touch or pen stroke (which never delivers pointerup) still saves the
+     * outline currently displayed, keeping the stored response in step with
+     * what the student sees.
+     */
+    Simulator.prototype.finalizeMargin = function() {
+        if (!this.drawing && this.dragPointIndex < 0) {
+            return;
+        }
+        this.dragPointIndex = -1;
+        this.drawing = false;
+        this.strokeStarted = false;
+        this.dragMoved = false;
+        this.saveMargin();
+        this.drawMargin();
+    };
+
     Simulator.prototype.marginPointerDown = function(e) {
         var pos = this.canvasPos(e);
         this.dragPointIndex = this.findHandle(pos[0], pos[1]);
@@ -830,12 +873,15 @@ define([], function() {
 
         // Freehand draw: the first real movement (past a small threshold, so a
         // jittery tap does not wipe an existing polygon) starts a fresh polygon,
-        // then points are appended as the pointer travels far enough.
+        // then points are appended as the pointer travels far enough. The
+        // threshold is kept constant in screen pixels regardless of the canvas's
+        // on-screen scale.
+        var gap = this.freehandGapLogical();
         var nat = this.roundPoint(this.toNatural(pos[0], pos[1]));
         if (!this.strokeStarted) {
             var mdx = pos[0] - this.downPos[0];
             var mdy = pos[1] - this.downPos[1];
-            if (Math.sqrt(mdx * mdx + mdy * mdy) < FREEHAND_GAP) {
+            if (Math.sqrt(mdx * mdx + mdy * mdy) < gap) {
                 return;
             }
             this.strokeStarted = true;
@@ -848,7 +894,7 @@ define([], function() {
         var lc = this.toCanvas(last[0], last[1]);
         var dx = lc[0] - pos[0];
         var dy = lc[1] - pos[1];
-        if (Math.sqrt(dx * dx + dy * dy) >= FREEHAND_GAP) {
+        if (Math.sqrt(dx * dx + dy * dy) >= gap) {
             this.marginPoints.push(nat);
             this.drawMargin();
         }
