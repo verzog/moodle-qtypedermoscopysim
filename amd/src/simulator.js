@@ -564,6 +564,19 @@ define([], function() {
     Simulator.prototype.updatePhase = function() {
         this.marginWrap.style.display = this.captured ? '' : 'none';
         this.captureBtn.disabled = this.captured;
+        // Reflect the capture state onto the dermoscope's keyboard/AT exposure.
+        // Once captured, the photo region is inert (photoKeydown() returns
+        // early), so take it out of the tab order and relabel it instead of
+        // leaving a focusable dead control still labelled "move and capture".
+        if (this.photoWrap && !this.config.readonly) {
+            if (this.captured) {
+                this.photoWrap.setAttribute('tabindex', '-1');
+                this.photoWrap.setAttribute('aria-label', this.config.strings.simcapturedlabel);
+            } else {
+                this.photoWrap.setAttribute('tabindex', '0');
+                this.photoWrap.setAttribute('aria-label', this.config.strings.simregionlabel);
+            }
+        }
     };
 
     /**
@@ -574,10 +587,9 @@ define([], function() {
         var dragging = false;
 
         // Make the interactive regions keyboard-operable and labelled for
-        // assistive technology.
-        this.photoWrap.setAttribute('tabindex', '0');
+        // assistive technology. The photo region's tabindex and label track the
+        // capture phase (see updatePhase); its role is phase-independent.
         this.photoWrap.setAttribute('role', 'application');
-        this.photoWrap.setAttribute('aria-label', this.config.strings.simregionlabel);
         this.marginCanvas.setAttribute('tabindex', '0');
         this.marginCanvas.setAttribute('role', 'application');
         this.marginCanvas.setAttribute('aria-label', this.config.strings.marginregionlabel);
@@ -763,16 +775,16 @@ define([], function() {
         var handled = true;
         switch (e.key) {
             case 'ArrowLeft':
-                c[0] = Math.max(0, c[0] - step);
+                this.clampCursorToCircle(c[0] - step, c[1]);
                 break;
             case 'ArrowRight':
-                c[0] = Math.min(MARGIN_SIZE, c[0] + step);
+                this.clampCursorToCircle(c[0] + step, c[1]);
                 break;
             case 'ArrowUp':
-                c[1] = Math.max(0, c[1] - step);
+                this.clampCursorToCircle(c[0], c[1] - step);
                 break;
             case 'ArrowDown':
-                c[1] = Math.min(MARGIN_SIZE, c[1] + step);
+                this.clampCursorToCircle(c[0], c[1] + step);
                 break;
             case 'Enter':
             case ' ':
@@ -793,6 +805,28 @@ define([], function() {
             e.preventDefault();
             this.drawMargin();
         }
+    };
+
+    /**
+     * Move the crosshair cursor to a requested position, clamped to the
+     * circular marking area rather than the square bounding box, so a keyboard
+     * user cannot place a point in a corner that the round canvas clip hides.
+     *
+     * @param {Number} x requested cursor x in logical canvas units
+     * @param {Number} y requested cursor y in logical canvas units
+     */
+    Simulator.prototype.clampCursorToCircle = function(x, y) {
+        var centre = MARGIN_SIZE / 2;
+        var dx = x - centre;
+        var dy = y - centre;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > centre && dist > 0) {
+            var k = centre / dist;
+            x = centre + dx * k;
+            y = centre + dy * k;
+        }
+        this.marginCursor[0] = x;
+        this.marginCursor[1] = y;
     };
 
     /**
@@ -987,6 +1021,23 @@ define([], function() {
         var x = this.marginCursor[0];
         var y = this.marginCursor[1];
         ctx.save();
+        ctx.lineCap = 'round';
+        // Two passes: a dark halo first, then the bright cursor on top, so the
+        // crosshair keeps contrast over arbitrary (including light or
+        // yellow-toned) clinical photo pixels.
+        // Dark halo.
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(x - 10, y);
+        ctx.lineTo(x + 10, y);
+        ctx.moveTo(x, y - 10);
+        ctx.lineTo(x, y + 10);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.stroke();
+        // Bright cursor.
         ctx.strokeStyle = '#ffd400';
         ctx.lineWidth = 2;
         ctx.beginPath();

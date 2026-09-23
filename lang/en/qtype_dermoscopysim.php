@@ -91,6 +91,7 @@ $string['retake'] = 'Retake image';
 $string['scalebar'] = '10 mm';
 $string['scaleneedsmm'] = 'Enter a known length in millimetres before drawing the calibration line.';
 $string['scaleset'] = 'Scale set to';
+$string['simcapturedlabel'] = 'Captured image. Use the Retake image button to reposition the dermoscope.';
 $string['simregionlabel'] = 'Dermoscope. Use the arrow keys to move it over the photograph, and Enter to capture the image.';
 $string['studentanswer'] = 'Your margin';
 $string['takepicture'] = 'Take picture';

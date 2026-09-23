@@ -93,6 +93,7 @@ class qtype_dermoscopysim_renderer extends qtype_renderer {
                 'photoalt' => get_string('photoalt', 'qtype_dermoscopysim'),
                 'positionprompt' => get_string('positionprompt', 'qtype_dermoscopysim'),
                 'retake' => get_string('retake', 'qtype_dermoscopysim'),
+                'simcapturedlabel' => get_string('simcapturedlabel', 'qtype_dermoscopysim'),
                 'simregionlabel' => get_string('simregionlabel', 'qtype_dermoscopysim'),
                 'takepicture' => get_string('takepicture', 'qtype_dermoscopysim'),
                 'undopoint' => get_string('undopoint', 'qtype_dermoscopysim'),
