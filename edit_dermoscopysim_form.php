@@ -175,6 +175,9 @@ class qtype_dermoscopysim_edit_form extends question_edit_form {
             'imagenotfound' => get_string('imagenotfound', 'qtype_dermoscopysim'),
             'lesionlabel' => get_string('lesionlabel', 'qtype_dermoscopysim'),
             'ideallabel' => get_string('ideallabel', 'qtype_dermoscopysim'),
+            'acceptanceband' => get_string('acceptanceband', 'qtype_dermoscopysim'),
+            'scaleset' => get_string('scaleset', 'qtype_dermoscopysim'),
+            'scaleneedsmm' => get_string('scaleneedsmm', 'qtype_dermoscopysim'),
         ];
         global $PAGE;
         $PAGE->requires->js_call_amd(

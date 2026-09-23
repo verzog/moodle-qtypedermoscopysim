@@ -114,15 +114,42 @@ class qtype_dermoscopysim_renderer extends qtype_renderer {
             return '';
         }
 
-        $capture = round($question->grade_capture($response) * 100);
-        $margin = round($question->grade_margin($response) * 100);
+        $capture = (int) round($question->grade_capture($response) * 100);
+        $margin = (int) round($question->grade_margin($response) * 100);
 
-        $a = new stdClass();
-        $a->capture = $capture;
-        $a->margin = $margin;
+        $meters = $this->score_meter(get_string('capturescore', 'qtype_dermoscopysim'), $capture)
+            . $this->score_meter(get_string('marginscore', 'qtype_dermoscopysim'), $margin);
+
+        return html_writer::div($meters, 'qtype_dermoscopysim-feedback');
+    }
+
+    /**
+     * Render a single labelled score meter for the specific feedback.
+     *
+     * @param string $label the accessible label for this score
+     * @param int $percent the score as a whole-number percentage (0-100)
+     * @return string HTML fragment for one meter row
+     */
+    protected function score_meter($label, $percent) {
+        $percent = max(0, min(100, (int) $percent));
+        $value = $percent . '%';
+
+        $fill = html_writer::div('', 'qtype_dermoscopysim-meter-fill', ['style' => 'width: ' . $percent . '%;']);
+        $track = html_writer::div($fill, 'qtype_dermoscopysim-meter-track');
+
         return html_writer::div(
-            get_string('feedbackscores', 'qtype_dermoscopysim', $a),
-            'qtype_dermoscopysim-feedback'
+            html_writer::span($label, 'qtype_dermoscopysim-meter-label')
+                . $track
+                . html_writer::span($value, 'qtype_dermoscopysim-meter-value'),
+            'qtype_dermoscopysim-meter',
+            [
+                'role' => 'progressbar',
+                'aria-label' => $label,
+                'aria-valuemin' => '0',
+                'aria-valuemax' => '100',
+                'aria-valuenow' => (string) $percent,
+                'aria-valuetext' => $value,
+            ]
         );
     }
 
