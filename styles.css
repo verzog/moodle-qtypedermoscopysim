@@ -25,6 +25,26 @@
     cursor: grabbing;
 }
 
+/* Visible keyboard-focus indicator on the interactive regions. */
+.qtype_dermoscopysim-photo:focus-visible,
+.qtype_dermoscopysim-margincanvas:focus-visible {
+    outline: 3px solid #0a58ca;
+    outline-offset: 2px;
+}
+
+/* Visually-hidden helper for screen-reader live announcements. */
+.qtype_dermoscopysim-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 .qtype_dermoscopysim-photo img {
     display: block;
     max-width: 100%;
@@ -189,5 +209,15 @@
     width: 14px;
     height: 14px;
     border-radius: 3px;
+    flex-shrink: 0;
+}
+
+/* Legend line sample: shows each outline's colour AND line style, so the
+   comparison is not distinguishable by colour alone. */
+.qtype_dermoscopysim-legend-line {
+    display: inline-block;
+    width: 26px;
+    height: 0;
+    border-top-width: 3px;
     flex-shrink: 0;
 }

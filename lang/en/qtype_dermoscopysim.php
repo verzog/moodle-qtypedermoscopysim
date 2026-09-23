@@ -23,6 +23,10 @@
  */
 
 $string['acceptanceband'] = 'Acceptance band';
+$string['announcecaptured'] = 'Image captured. Now mark the excision margin.';
+$string['announcecleared'] = 'Margin cleared.';
+$string['announcepoints'] = 'Margin points placed:';
+$string['announceretake'] = 'Capture cleared. Reposition the dermoscope, then capture again.';
 $string['baseimage'] = 'Clinical photograph';
 $string['baseimage_help'] = 'Upload a single high-resolution clinical photograph. After uploading, use the authoring tools below to calibrate the scale and trace the lesion boundary on the photograph.';
 $string['calibratebyline'] = 'Calibrate by line';
@@ -64,6 +68,7 @@ $string['marginmethod'] = 'Margin assessment method';
 $string['marginmethod_help'] = 'Distance from lesion edge: the clearance between the student margin and the lesion edge is sampled all the way around, and the score is the proportion of samples inside the clearance band. Zones: full marks only if every sample is inside the clearance band, otherwise zero. Compare to ideal margin: the student margin is compared with the instructor-drawn ideal margin, with full marks when the mean deviation is within the tolerance.';
 $string['marginmm'] = 'Minimum clearance (mm)';
 $string['marginprompt'] = 'Mark the excision margin on your captured image: drag to draw the outline with a mouse, finger or pen, or click to place points one at a time. Drag any point to adjust it.';
+$string['marginregionlabel'] = 'Margin marking area. Use the arrow keys to move the crosshair, Enter to place a point, and Backspace to remove the last point.';
 $string['marginscore'] = 'Margin accuracy';
 $string['methoddistance'] = 'Distance from lesion edge';
 $string['methodideal'] = 'Compare to ideal margin';
@@ -71,6 +76,7 @@ $string['methodzones'] = 'Zones (pass or fail)';
 $string['mmperpx'] = 'Scale (millimetres per pixel)';
 $string['mmperpx_help'] = 'How many millimetres of skin one pixel of the photograph represents. Either type the value directly, or use the calibrate-by-line tool in the authoring canvas: enter a known length and click its two ends on the photograph.';
 $string['notcaptured'] = 'No image has been captured.';
+$string['photoalt'] = 'Clinical photograph for dermoscopic examination.';
 $string['pleasecapture'] = 'Position the dermoscope over the lesion and capture an image.';
 $string['pleasemargin'] = 'Mark the excision margin with at least three points on your captured image.';
 $string['pluginname'] = 'Dermoscopy simulator';
@@ -85,6 +91,7 @@ $string['retake'] = 'Retake image';
 $string['scalebar'] = '10 mm';
 $string['scaleneedsmm'] = 'Enter a known length in millimetres before drawing the calibration line.';
 $string['scaleset'] = 'Scale set to';
+$string['simregionlabel'] = 'Dermoscope. Use the arrow keys to move it over the photograph, and Enter to capture the image.';
 $string['studentanswer'] = 'Your margin';
 $string['takepicture'] = 'Take picture';
 $string['undopoint'] = 'Undo last point';

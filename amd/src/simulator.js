@@ -16,12 +16,13 @@
 /**
  * Interactive dermoscope simulator for the student attempt page.
  *
- * The clinical photograph is displayed at a minimum of 1000 px wide.
- * A circular lens canvas is overlaid on the photo showing the magnified
- * dermoscopic view inside itself. A zoom slider adjusts how much of the
- * faceplate area is visible without changing the lens circle size. A "Take
- * picture" button captures the view; phase two lets the student mark
- * excision margins on the captured image.
+ * The clinical photograph scales to fit its container. A circular lens canvas
+ * is overlaid on the photo showing the magnified dermoscopic view inside
+ * itself. A zoom slider adjusts how much of the faceplate area is visible
+ * without changing the lens circle size. A "Take picture" button captures the
+ * view; phase two lets the student mark excision margins on the captured
+ * image. Both steps are operable by pointer, touch/pen (including freehand
+ * drawing) and keyboard.
  *
  * A separate initCorrectAnswer() export draws a comparison canvas for the
  * question engine's correct_response() display (shown based on quiz
@@ -246,8 +247,10 @@ define([], function() {
      * @param {String|null} fill fill colour, or null for no fill
      * @param {Number} [lineWidth=2] stroke width
      * @param {Boolean} [closed=true] whether to close the path back to the start
+     * @param {Number[]} [dash] a line-dash pattern, so shapes are distinguishable
+     *     without relying on colour
      */
-    function drawPolygon(ctx, points, stroke, fill, lineWidth, closed) {
+    function drawPolygon(ctx, points, stroke, fill, lineWidth, closed, dash) {
         if (points.length < 2) {
             return;
         }
@@ -266,9 +269,12 @@ define([], function() {
             ctx.fillStyle = fill;
             ctx.fill();
         }
+        ctx.save();
+        ctx.setLineDash(dash || []);
         ctx.strokeStyle = stroke;
         ctx.lineWidth = lineWidth || 2;
         ctx.stroke();
+        ctx.restore();
     }
 
     /**
@@ -403,6 +409,11 @@ define([], function() {
         this.dragMoved = false;
         this.drawing = false;
         this.strokeStarted = false;
+        // Keyboard-operation state: a crosshair cursor on the margin canvas and
+        // whether that canvas currently has keyboard focus.
+        this.marginCursor = [MARGIN_SIZE / 2, MARGIN_SIZE / 2];
+        this.marginFocused = false;
+        this.lensStep = 1;
         this.image = new Image();
         this.image.addEventListener('load', this.build.bind(this));
         this.image.src = config.imageurl;
@@ -417,10 +428,18 @@ define([], function() {
 
         this.lensX = this.image.naturalWidth / 2;
         this.lensY = this.image.naturalHeight / 2;
+        // Keyboard nudge step for the dermoscope, in natural image pixels.
+        this.lensStep = Math.max(1, Math.round(this.image.naturalWidth / 200));
 
         // Prompt.
         this.prompt = el('p', 'qtype_dermoscopysim-prompt', cfg.strings.positionprompt);
         this.container.appendChild(this.prompt);
+
+        // Off-screen polite live region for screen-reader status announcements.
+        this.liveRegion = el('div', 'qtype_dermoscopysim-sr-only');
+        this.liveRegion.setAttribute('aria-live', 'polite');
+        this.liveRegion.setAttribute('role', 'status');
+        this.container.appendChild(this.liveRegion);
 
         // Scrollable photo container.
         this.photoScroll = el('div', 'qtype_dermoscopysim-photoscroll');
@@ -428,7 +447,7 @@ define([], function() {
 
         this.photoImg = document.createElement('img');
         this.photoImg.src = cfg.imageurl;
-        this.photoImg.alt = '';
+        this.photoImg.alt = cfg.strings.photoalt;
         this.photoImg.draggable = false;
         this.photoWrap.appendChild(this.photoImg);
 
@@ -453,6 +472,10 @@ define([], function() {
         this.zoomSlider.step = '0.1';
         this.zoomSlider.value = '1.0';
         this.zoomSlider.className = 'qtype_dermoscopysim-zoomslider';
+        var zoomId = this.container.id + '_zoom';
+        this.zoomSlider.id = zoomId;
+        zLabel.setAttribute('for', zoomId);
+        this.zoomSlider.setAttribute('aria-label', cfg.strings.zoomlabel);
         this.zoomValue = el('span', 'qtype_dermoscopysim-zoomvalue', '1.0\u00d7');
         zoomGroup.appendChild(zLabel);
         zoomGroup.appendChild(this.zoomSlider);
@@ -550,6 +573,15 @@ define([], function() {
         var self = this;
         var dragging = false;
 
+        // Make the interactive regions keyboard-operable and labelled for
+        // assistive technology.
+        this.photoWrap.setAttribute('tabindex', '0');
+        this.photoWrap.setAttribute('role', 'application');
+        this.photoWrap.setAttribute('aria-label', this.config.strings.simregionlabel);
+        this.marginCanvas.setAttribute('tabindex', '0');
+        this.marginCanvas.setAttribute('role', 'application');
+        this.marginCanvas.setAttribute('aria-label', this.config.strings.marginregionlabel);
+
         this.photoWrap.addEventListener('pointerdown', function(e) {
             if (self.captured) {
                 return;
@@ -578,6 +610,9 @@ define([], function() {
             self.saveCapture();
             self.updatePhase();
             self.drawMargin();
+            self.announce(self.config.strings.announcecaptured);
+            // Move keyboard focus on to the margin step.
+            self.marginCanvas.focus();
         });
         this.retakeBtn.addEventListener('click', function() {
             self.captured = false;
@@ -586,16 +621,20 @@ define([], function() {
             self.saveMargin();
             self.updatePhase();
             self.drawLens();
+            self.announce(self.config.strings.announceretake);
+            self.photoWrap.focus();
         });
         this.undoBtn.addEventListener('click', function() {
             self.marginPoints.pop();
             self.saveMargin();
             self.drawMargin();
+            self.announcePoints();
         });
         this.clearBtn.addEventListener('click', function() {
             self.marginPoints = [];
             self.saveMargin();
             self.drawMargin();
+            self.announce(self.config.strings.announcecleared);
         });
 
         this.zoomSlider.addEventListener('input', function() {
@@ -621,6 +660,139 @@ define([], function() {
         this.marginCanvas.addEventListener('lostpointercapture', function() {
             self.finalizeMargin();
         });
+
+        // Keyboard operation.
+        this.photoWrap.addEventListener('keydown', function(e) {
+            self.photoKeydown(e);
+        });
+        this.marginCanvas.addEventListener('keydown', function(e) {
+            self.marginKeydown(e);
+        });
+        this.marginCanvas.addEventListener('focus', function() {
+            self.marginFocused = true;
+            self.drawMargin();
+        });
+        this.marginCanvas.addEventListener('blur', function() {
+            self.marginFocused = false;
+            self.drawMargin();
+        });
+    };
+
+    /**
+     * Announce a message to screen-reader users via the polite live region.
+     *
+     * @param {String} message the text to announce
+     */
+    Simulator.prototype.announce = function(message) {
+        if (this.liveRegion) {
+            this.liveRegion.textContent = message;
+        }
+    };
+
+    /**
+     * Announce the current margin point count.
+     */
+    Simulator.prototype.announcePoints = function() {
+        this.announce(this.config.strings.announcepoints + ' ' + this.marginPoints.length);
+    };
+
+    /**
+     * Set the dermoscope centre to an absolute natural-image position, clamped
+     * to the image, then re-layout and redraw.
+     *
+     * @param {Number} x natural x
+     * @param {Number} y natural y
+     */
+    Simulator.prototype.setLens = function(x, y) {
+        this.lensX = Math.max(0, Math.min(this.image.naturalWidth, x));
+        this.lensY = Math.max(0, Math.min(this.image.naturalHeight, y));
+        this.layoutLens();
+        this.drawLens();
+    };
+
+    /**
+     * Handle keyboard control of the dermoscope: arrow keys move it (Shift for a
+     * larger step), Home recentres, and Enter/Space captures.
+     *
+     * @param {KeyboardEvent} e the key event
+     */
+    Simulator.prototype.photoKeydown = function(e) {
+        if (this.captured) {
+            return;
+        }
+        var step = this.lensStep * (e.shiftKey ? 5 : 1);
+        var handled = true;
+        switch (e.key) {
+            case 'ArrowLeft':
+                this.setLens(this.lensX - step, this.lensY);
+                break;
+            case 'ArrowRight':
+                this.setLens(this.lensX + step, this.lensY);
+                break;
+            case 'ArrowUp':
+                this.setLens(this.lensX, this.lensY - step);
+                break;
+            case 'ArrowDown':
+                this.setLens(this.lensX, this.lensY + step);
+                break;
+            case 'Home':
+                this.setLens(this.image.naturalWidth / 2, this.image.naturalHeight / 2);
+                break;
+            case 'Enter':
+            case ' ':
+                this.captureBtn.click();
+                break;
+            default:
+                handled = false;
+        }
+        if (handled) {
+            e.preventDefault();
+        }
+    };
+
+    /**
+     * Handle keyboard control of margin marking: arrow keys move a crosshair
+     * cursor (Shift for a larger step), Enter/Space places a point at the
+     * cursor, and Backspace/Delete removes the last point.
+     *
+     * @param {KeyboardEvent} e the key event
+     */
+    Simulator.prototype.marginKeydown = function(e) {
+        var step = e.shiftKey ? 20 : 4;
+        var c = this.marginCursor;
+        var handled = true;
+        switch (e.key) {
+            case 'ArrowLeft':
+                c[0] = Math.max(0, c[0] - step);
+                break;
+            case 'ArrowRight':
+                c[0] = Math.min(MARGIN_SIZE, c[0] + step);
+                break;
+            case 'ArrowUp':
+                c[1] = Math.max(0, c[1] - step);
+                break;
+            case 'ArrowDown':
+                c[1] = Math.min(MARGIN_SIZE, c[1] + step);
+                break;
+            case 'Enter':
+            case ' ':
+                this.marginPoints.push(this.roundPoint(this.toNatural(c[0], c[1])));
+                this.saveMargin();
+                this.announcePoints();
+                break;
+            case 'Backspace':
+            case 'Delete':
+                this.marginPoints.pop();
+                this.saveMargin();
+                this.announcePoints();
+                break;
+            default:
+                handled = false;
+        }
+        if (handled) {
+            e.preventDefault();
+            this.drawMargin();
+        }
     };
 
     /**
@@ -770,6 +942,11 @@ define([], function() {
         drawRing(ctx, MARGIN_SIZE, true);
         drawReticle(ctx, MARGIN_SIZE, this.config.lensdiametermm / this.zoomLevel);
 
+        // Keyboard crosshair cursor, shown while the canvas has keyboard focus.
+        if (this.marginFocused) {
+            this.drawMarginCursor(ctx);
+        }
+
         if (this.marginPoints.length === 0) {
             return;
         }
@@ -799,6 +976,29 @@ define([], function() {
                 ctx.stroke();
             });
         }
+    };
+
+    /**
+     * Draw the keyboard crosshair cursor at its current position.
+     *
+     * @param {CanvasRenderingContext2D} ctx the margin canvas context
+     */
+    Simulator.prototype.drawMarginCursor = function(ctx) {
+        var x = this.marginCursor[0];
+        var y = this.marginCursor[1];
+        ctx.save();
+        ctx.strokeStyle = '#ffd400';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - 10, y);
+        ctx.lineTo(x + 10, y);
+        ctx.moveTo(x, y - 10);
+        ctx.lineTo(x, y + 10);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.stroke();
+        ctx.restore();
     };
 
     /**
@@ -997,37 +1197,67 @@ define([], function() {
                 });
             }
 
-            // Lesion boundary (red, semi-transparent).
+            /**
+             * Draw an on-canvas text label for a shape near its first vertex,
+             * with a light outline so it reads over any background. This, plus
+             * the distinct line styles below, distinguishes the three outlines
+             * without relying on colour alone.
+             *
+             * @param {Array} pts the shape's points in canvas coordinates
+             * @param {String} text the label text
+             * @param {String} colour the label colour
+             */
+            function labelShape(pts, text, colour) {
+                if (!pts.length) {
+                    return;
+                }
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'left';
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.strokeText(text, pts[0][0] + 8, pts[0][1] - 8);
+                ctx.fillStyle = colour;
+                ctx.fillText(text, pts[0][0] + 8, pts[0][1] - 8);
+            }
+
+            // Lesion boundary \u2014 red, dotted.
             var lesion = parsePoints(config.lesiondata);
             if (lesion.length >= 3) {
-                drawPolygon(ctx, tc(lesion), '#e53935', 'rgba(229, 57, 53, 0.25)', 1.5);
+                var lesionc = tc(lesion);
+                drawPolygon(ctx, lesionc, '#e53935', 'rgba(229, 57, 53, 0.25)', 1.5, true, [2, 3]);
+                labelShape(lesionc, config.strings.lesionlabel, '#c62828');
             }
 
-            // Student margin (blue).
+            // Student margin \u2014 blue, dashed.
             var student = parsePoints(config.studentmargin);
             if (student.length >= 3) {
-                drawPolygon(ctx, tc(student), '#2196f3', 'rgba(33, 150, 243, 0.15)', 2);
+                var studentc = tc(student);
+                drawPolygon(ctx, studentc, '#2196f3', 'rgba(33, 150, 243, 0.15)', 2, true, [9, 6]);
+                labelShape(studentc, config.strings.studentanswer, '#1565c0');
             }
 
-            // Correct margin (teal).
+            // Correct margin \u2014 teal, solid.
             var correct = parsePoints(config.correctmargin);
             if (correct.length >= 3) {
-                drawPolygon(ctx, tc(correct), '#1d9e75', 'rgba(29, 158, 117, 0.2)', 2.5);
+                var correctc = tc(correct);
+                drawPolygon(ctx, correctc, '#1d9e75', 'rgba(29, 158, 117, 0.2)', 2.5, true, []);
+                labelShape(correctc, config.strings.correctanswer, '#12795b');
             }
 
-            // Colour legend.
+            // Legend: colour plus line style, so it is not colour-only.
             var legend = document.createElement('div');
             legend.className = 'qtype_dermoscopysim-legend';
             [
-                ['#e53935', config.strings.lesionlabel],
-                ['#2196f3', config.strings.studentanswer],
-                ['#1d9e75', config.strings.correctanswer]
+                ['#e53935', config.strings.lesionlabel, 'dotted'],
+                ['#2196f3', config.strings.studentanswer, 'dashed'],
+                ['#1d9e75', config.strings.correctanswer, 'solid']
             ].forEach(function(item) {
                 var row = document.createElement('div');
                 row.className = 'qtype_dermoscopysim-legend-item';
                 var sw = document.createElement('span');
-                sw.className = 'qtype_dermoscopysim-legend-swatch';
-                sw.style.setProperty('background', item[0]);
+                sw.className = 'qtype_dermoscopysim-legend-line';
+                sw.style.setProperty('border-top-color', item[0]);
+                sw.style.setProperty('border-top-style', item[2]);
                 row.appendChild(sw);
                 row.appendChild(document.createTextNode('\u00a0' + item[1]));
                 legend.appendChild(row);
