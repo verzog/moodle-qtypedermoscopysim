@@ -25,8 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'qtype_dermoscopysim';
-$plugin->version = 2026092301;
+$plugin->version = 2026092400;
 $plugin->requires = 2025041400;
 $plugin->supported = [500, 501];
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '0.2.1';
+$plugin->release = '0.2.2';
