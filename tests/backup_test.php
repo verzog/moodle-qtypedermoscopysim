@@ -24,6 +24,7 @@
 
 namespace qtype_dermoscopysim;
 
+use PHPUnit\Framework\Attributes\CoversNothing;
 use question_bank;
 
 defined('MOODLE_INTERNAL') || die();
@@ -40,6 +41,7 @@ require_once($CFG->dirroot . '/backup/util/includes/restore_includes.php');
  * @copyright  2026 Skin Cancer College Australasia
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+#[CoversNothing]
 final class backup_test extends \advanced_testcase {
     /**
      * The backup plugin declares the base image file area so it is included in
