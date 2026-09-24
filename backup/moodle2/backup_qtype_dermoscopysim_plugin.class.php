@@ -36,4 +36,19 @@ require_once($CFG->dirroot . '/backup/moodle2/backup_qtype_extrafields_plugin.cl
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class backup_qtype_dermoscopysim_plugin extends backup_qtype_extrafields_plugin {
+    /**
+     * Declare the file areas owned by this question type so the question
+     * backup subsystem includes and restores them.
+     *
+     * The extrafields base class handles the option columns, but custom file
+     * areas must be named here or the clinical photograph would be dropped on
+     * backup, restore, course import and question duplication.
+     *
+     * @return array filearea => mapping name
+     */
+    public static function get_qtype_fileareas() {
+        return [
+            'baseimage' => 'question_created',
+        ];
+    }
 }

@@ -100,4 +100,64 @@ class qtype_dermoscopysim_test_helper extends question_test_helper {
 
         return $q;
     }
+
+    /**
+     * Returns the editing-form data for a centred-lesion question, including a
+     * base image, as if submitted through the question editor.
+     *
+     * Used by the core question generator (create_question) to persist a real
+     * question with an uploaded clinical photograph, so backup/restore of the
+     * image file can be exercised.
+     *
+     * @return \stdClass the form data
+     */
+    public function get_dermoscopysim_question_form_data_lesion_centred() {
+        global $CFG, $USER;
+
+        // Attach the fixture clinical photograph to a user draft file area, as
+        // the file manager element would.
+        $draftitemid = 0;
+        file_prepare_draft_area($draftitemid, null, null, null, null);
+        $fs = get_file_storage();
+        $filerecord = new \stdClass();
+        $filerecord->contextid = \context_user::instance($USER->id)->id;
+        $filerecord->component = 'user';
+        $filerecord->filearea = 'draft';
+        $filerecord->itemid = $draftitemid;
+        $filerecord->filepath = '/';
+        $filerecord->filename = 'base.png';
+        $fs->create_file_from_pathname(
+            $filerecord,
+            $CFG->dirroot . '/question/type/dermoscopysim/tests/fixtures/base.png'
+        );
+
+        $form = new \stdClass();
+        $form->name = 'Dermoscopy test — centred lesion';
+        $form->questiontext = [
+            'text' => 'Position the dermoscope over the lesion.',
+            'format' => FORMAT_HTML,
+        ];
+        $form->generalfeedback = ['text' => '', 'format' => FORMAT_HTML];
+        $form->defaultmark = 1;
+        $form->penalty = 0;
+
+        $form->baseimage = $draftitemid;
+        $form->mmperpx = 0.1;
+        $form->lensdiametermm = 20;
+        $form->magnification = 10;
+        $form->capturetolerancemm = 2;
+        $form->captureweight = 30;
+        $form->marginmethod = 'distance';
+        $form->marginmm = 2;
+        $form->marginmaxmm = 4;
+        $form->idealtolerancemm = 1;
+        $form->lesiondata = json_encode([
+            [300, 220], [340, 220], [340, 260], [300, 260],
+        ]);
+        $form->idealmargindata = json_encode([
+            [290, 210], [350, 210], [350, 270], [290, 270],
+        ]);
+
+        return $form;
+    }
 }
