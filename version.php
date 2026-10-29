@@ -25,8 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'qtype_dermoscopysim';
-$plugin->version = 2026092400;
-$plugin->requires = 2025041400;
-$plugin->supported = [500, 501];
+$plugin->version = 2026102900;
+$plugin->requires = 2025100600; // Moodle 5.1.
+$plugin->supported = [501, 503]; // Moodle 5.1 to 5.3 LTS.
 $plugin->maturity = MATURITY_ALPHA;
 $plugin->release = '0.2.2';
