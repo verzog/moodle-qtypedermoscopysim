@@ -1,7 +1,9 @@
 name: Moodle CI
 
 # Runs the shared Moodle plugin CI: see https://github.com/verzog/moodle-ci-workflows.
-# The matrix lists every Moodle branch, PHP and database this plugin is tested on.
+# Its default matrix is Moodle 5.1 to 5.3 LTS (PostgreSQL 17 and MariaDB 11) plus Moodle main, which is allowed to
+# fail. MOODLE_500_STABLE is deliberately excluded: it is below the 5.1 baseline in version.php. Its Grunt step runs on
+# MOODLE_501_STABLE, the branch amd/build is made on.
 # Run on pull requests, and on pushes to main and tags only. A plain "[push, pull_request]" runs the whole matrix
 # twice for every push to a PR branch (once per event).
 on:
@@ -18,20 +20,3 @@ permissions:
 jobs:
   ci:
     uses: verzog/moodle-ci-workflows/.github/workflows/moodle-plugin-ci.yml@v1
-    with:
-      matrix: >-
-        [
-          {"moodle-branch": "MOODLE_500_STABLE", "php": "8.2", "database": "pgsql"},
-          {"moodle-branch": "MOODLE_500_STABLE", "php": "8.2", "database": "mariadb"},
-          {"moodle-branch": "MOODLE_500_STABLE", "php": "8.3", "database": "pgsql"},
-          {"moodle-branch": "MOODLE_500_STABLE", "php": "8.3", "database": "mariadb"},
-          {"moodle-branch": "MOODLE_500_STABLE", "php": "8.4", "database": "pgsql"},
-          {"moodle-branch": "MOODLE_500_STABLE", "php": "8.4", "database": "mariadb"},
-          {"moodle-branch": "MOODLE_501_STABLE", "php": "8.2", "database": "pgsql"},
-          {"moodle-branch": "MOODLE_501_STABLE", "php": "8.2", "database": "mariadb"},
-          {"moodle-branch": "MOODLE_501_STABLE", "php": "8.3", "database": "pgsql"},
-          {"moodle-branch": "MOODLE_501_STABLE", "php": "8.3", "database": "mariadb"},
-          {"moodle-branch": "MOODLE_501_STABLE", "php": "8.4", "database": "pgsql"},
-          {"moodle-branch": "MOODLE_501_STABLE", "php": "8.4", "database": "mariadb"}
-        ]
-      grunt-branch: MOODLE_500_STABLE

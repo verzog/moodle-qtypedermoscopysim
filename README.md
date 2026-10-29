@@ -20,8 +20,8 @@ then mark excision margins on the captured image — all auto-graded server-side
 
 ## Requirements
 
-- Moodle 5.0 or later
-- PHP 8.2 or later
+- Moodle 5.1 to 5.3 LTS
+- PHP 8.2 to 8.4 (8.3 or later on Moodle 5.2 and 5.3)
 - A modern browser with Pointer Events support (Chrome 55+, Firefox 59+, Safari 13+)
 
 ---
@@ -39,8 +39,7 @@ then mark excision margins on the captured image — all auto-graded server-side
 ## Installing manually
 
 1. Extract the plugin folder so the path reads:
-   `<moodleroot>/question/type/dermoscopysim/` (Moodle 5.0)
-   or `<moodleroot>/public/question/type/dermoscopysim/` (Moodle 5.1+ `public/` layout)
+   `<moodleroot>/public/question/type/dermoscopysim/`
 2. Log in as an admin and go to *Site administration > Notifications* to trigger the
    database upgrade.
 
